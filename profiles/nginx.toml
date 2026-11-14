@@ -1,0 +1,63 @@
+# Profil logview: nginx / Apache access log
+#
+# Format „combined”, widok kolumn, kolory kodów HTTP (5xx czerwone,
+# 4xx pomarańczowe) i metod. Wybierany dla plików pasujących do wzorców.
+
+name = "nginx"
+file_patterns = ["*access*.log", "*nginx*", "*apache*.log", "*httpd*.log"]
+
+[format]
+mode = "builtin"
+name = "Apache/nginx (combined)"
+multiline = false
+
+[view]
+columns = true
+hidden_columns = ["user", "referer"]
+only_matching = true
+
+[filter]
+mode = "all"
+rules = []
+
+[[highlight]]
+pattern = '" 5\d\d '
+kind = "regex"
+scope = "match"
+minimap = true
+style = { fg = "#F44336", bold = true }
+
+[[highlight]]
+pattern = '" 4\d\d '
+kind = "regex"
+scope = "match"
+minimap = true
+style = { fg = "#FF9800", bold = true }
+
+[[highlight]]
+pattern = '^5\d\d$'
+kind = "regex"
+style = { fg = "#F44336", bold = true }
+
+[[highlight]]
+pattern = '^4\d\d$'
+kind = "regex"
+style = { fg = "#FF9800", bold = true }
+
+[[highlight]]
+pattern = '\b(GET|HEAD)\b'
+kind = "regex"
+case_sensitive = true
+style = { fg = "#42A5F5" }
+
+[[highlight]]
+pattern = '\b(POST|PUT|PATCH|DELETE)\b'
+kind = "regex"
+case_sensitive = true
+style = { fg = "#AB47BC", bold = true }
+
+[[highlight]]
+pattern = '" 5\d\d '
+kind = "regex"
+scope = "line"
+style = { bg = "#F4433622" }

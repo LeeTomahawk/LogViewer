@@ -1,0 +1,41 @@
+# Profil logview: JSON lines
+#
+# Jeden obiekt JSON na linię, widok kolumn z kluczy, panel szczegółów
+# pokazuje sformatowany JSON.
+
+name = "JSON lines"
+file_patterns = ["*.jsonl", "*.ndjson", "*.json.log"]
+
+[format]
+mode = "builtin"
+name = "JSON lines"
+multiline = false
+
+[view]
+columns = true
+only_matching = true
+
+[filter]
+rules = []
+
+[[highlight]]
+pattern = '(?i)\b(error|fatal|critical)\b'
+kind = "regex"
+minimap = true
+style = { fg = "#F44336", bold = true }
+
+[[highlight]]
+pattern = '(?i)\bwarn(ing)?\b'
+kind = "regex"
+minimap = true
+style = { fg = "#FF9800", bold = true }
+
+[[highlight]]
+pattern = '(?i)\binfo\b'
+kind = "regex"
+style = { fg = "#4CAF50" }
+
+[[highlight]]
+pattern = '(?i)\b(debug|trace)\b'
+kind = "regex"
+style = { fg = "#9E9E9E" }

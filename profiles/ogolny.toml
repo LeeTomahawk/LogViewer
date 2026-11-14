@@ -1,0 +1,70 @@
+# Profil logview: Ogólny
+#
+# Ustawienia domyślne: format wykrywany automatycznie, kolory poziomów.
+# Bez wzorców plików – nie jest wybierany automatycznie.
+
+name = "Ogólny"
+file_patterns = []
+
+[format]
+mode = "auto"
+multiline = true
+
+[view]
+wrap = false
+font_size = 13.0
+max_display_bytes = 4096
+tab_width = 4
+columns = false
+hidden_columns = []
+only_matching = true
+
+[filter]
+mode = "all"
+context_before = 0
+context_after = 0
+levels = ["TRACE", "DEBUG", "INFO", "WARN", "ERROR", "FATAL", "none"]
+rules = []
+
+[[highlight]]
+pattern = '\b(ERROR|FATAL|CRITICAL|SEVERE)\b'
+kind = "regex"
+case_sensitive = true
+scope = "match"
+enabled = true
+minimap = true
+style = { fg = "#F44336", bold = true }
+
+[[highlight]]
+pattern = '\bWARN(ING)?\b'
+kind = "regex"
+case_sensitive = true
+scope = "match"
+enabled = true
+minimap = true
+style = { fg = "#FF9800", bold = true }
+
+[[highlight]]
+pattern = '\bINFO\b'
+kind = "regex"
+case_sensitive = true
+style = { fg = "#4CAF50" }
+
+[[highlight]]
+pattern = '\bDEBUG\b'
+kind = "regex"
+case_sensitive = true
+style = { fg = "#42A5F5" }
+
+[[highlight]]
+pattern = '\bTRACE\b'
+kind = "regex"
+case_sensitive = true
+style = { fg = "#9E9E9E" }
+
+[[highlight]]
+pattern = '\b(ERROR|FATAL|CRITICAL|SEVERE)\b'
+kind = "regex"
+case_sensitive = true
+scope = "line"
+style = { bg = "#F4433628" }

@@ -1,0 +1,66 @@
+# Profil logview: aplikacja Java (logback/log4j)
+#
+# Format „czas + poziom [wątek] logger - wiadomość”, stack trace łączone
+# w rekordy, wyróżnione wyjątki i „Caused by”.
+
+name = "Java"
+file_patterns = ["catalina*.log", "*spring*.log", "*tomcat*.log"]
+
+[format]
+mode = "builtin"
+name = "Czas + poziom [wątek] logger - wiadomość"
+multiline = true
+
+[view]
+columns = false
+only_matching = true
+
+[filter]
+context_before = 0
+context_after = 0
+rules = []
+
+[[highlight]]
+pattern = '\b(ERROR|FATAL)\b'
+kind = "regex"
+case_sensitive = true
+minimap = true
+style = { fg = "#F44336", bold = true }
+
+[[highlight]]
+pattern = '\bWARN\b'
+kind = "regex"
+case_sensitive = true
+minimap = true
+style = { fg = "#FF9800", bold = true }
+
+[[highlight]]
+pattern = '^Caused by: .*'
+kind = "regex"
+case_sensitive = true
+scope = "line"
+style = { bg = "#F4433630" }
+
+[[highlight]]
+pattern = '\b[\w.$]+(Exception|Error)\b'
+kind = "regex"
+case_sensitive = true
+style = { fg = "#E57373", bold = true }
+
+[[highlight]]
+pattern = '^\s+at .*'
+kind = "regex"
+case_sensitive = true
+style = { fg = "#9E9E9E", italic = true }
+
+[[highlight]]
+pattern = '\bINFO\b'
+kind = "regex"
+case_sensitive = true
+style = { fg = "#4CAF50" }
+
+[[highlight]]
+pattern = '\b(DEBUG|TRACE)\b'
+kind = "regex"
+case_sensitive = true
+style = { fg = "#42A5F5" }
