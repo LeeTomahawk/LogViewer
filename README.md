@@ -41,6 +41,32 @@ cargo run --release -p logview-core --example write_live -- live.log 20  # dopis
 cargo run --release -p logview-core --example tail_check -- D:\tmp 200 100
 ```
 
+### Budowanie wersji do dystrybucji (Windows)
+
+```bash
+powershell -ExecutionPolicy Bypass -File scripts\package.ps1
+```
+
+Skrypt buduje profil `dist` (bez informacji debugowych, LTO, statycznie
+dołączone biblioteki C, więc nie trzeba Visual C++ Redistributable) i tworzy
+w `dist\`:
+
+- **`logview-<wersja>-windows-x64-portable.zip`** – `logview.exe` (~7 MB),
+  `portable.txt` i README. Plik `portable.txt` obok exe włącza **tryb
+  portable**: profile i sesja trafiają do folderu `data` obok programu zamiast
+  do `%APPDATA%`. Bez tego pliku exe używa ustawień użytkownika Windows;
+- **`logview-<wersja>-setup.exe`** – instalator (Inno Setup 6,
+  `winget install JRSoftware.InnoSetup`; bez niego skrypt robi tylko zip,
+  można też podać `-NoInstaller`). Instaluje do Program Files, dodaje skrót
+  w menu Start oraz opcjonalnie ikonę na pulpicie i „Otwórz w logview”
+  w menu kontekstowym plików `.log .txt .out .jsonl .gz .zst` (w Windows 11
+  pod „Pokaż więcej opcji”). Ma polską i angielską wersję językową
+  i deinstalator.
+
+Ikonę rysuje `scripts\make-icon.ps1` (`assets\logview.ico`, `assets\logview.png`).
+Jest osadzana w exe przez `build.rs` (wymaga `rc.exe` z Windows SDK, który
+instaluje się razem z narzędziami MSVC). Wersja pochodzi z `Cargo.toml`.
+
 Testy i benchmarki:
 
 ```bash

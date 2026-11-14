@@ -1,0 +1,5 @@
+# Link the C runtime statically on Windows, so logview.exe runs without the
+# Visual C++ Redistributable (needed for the portable version). The `cc`
+# crate follows this flag for bundled C code (zstd).
+[target.x86_64-pc-windows-msvc]
+rustflags = ["-C", "target-feature=+crt-static"]

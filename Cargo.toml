@@ -32,6 +32,16 @@ directories = "5"
 [profile.release]
 debug = 1
 
+# Builds for distribution (portable zip, installer): `cargo build --profile dist`.
+# Smaller and a bit faster than `release`, no debug info, slower to compile.
+[profile.dist]
+inherits = "release"
+debug = 0
+strip = true
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+
 # Faster debug builds of the GUI: optimise dependencies even in dev.
 [profile.dev.package."*"]
 opt-level = 2

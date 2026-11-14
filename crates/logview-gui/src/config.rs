@@ -2,12 +2,28 @@
 //!
 //! On Windows the folder is `%APPDATA%\logview\config`, on Linux
 //! `~/.config/logview`, on macOS `~/Library/Application Support/logview`.
+//!
+//! **Portable mode**: if a file named [`PORTABLE_MARKER`] lies next to the
+//! executable, the configuration lives in a `data` folder next to it, so the
+//! program and its settings can be carried around together.
 
 use std::path::{Path, PathBuf};
 
 use logview_core::profile::write_atomic;
 use logview_core::{Profile, ProfileStore};
 use serde::{Deserialize, Serialize};
+
+/// File next to the executable that switches on portable mode.
+pub const PORTABLE_MARKER: &str = "portable.txt";
+
+/// `data` next to the executable, if [`PORTABLE_MARKER`] is there.
+pub fn portable_dir() -> Option<PathBuf> {
+    let exe = std::env::current_exe().ok()?;
+    let dir = exe.parent()?;
+    dir.join(PORTABLE_MARKER)
+        .is_file()
+        .then(|| dir.join("data"))
+}
 
 /// Recent files kept in the session.
 pub const MAX_RECENT: usize = 12;
@@ -151,8 +167,12 @@ pub struct Config {
 }
 
 impl Config {
-    /// The per-user configuration folder, if the OS provides one.
+    /// The configuration folder: `data` next to the executable in portable
+    /// mode, otherwise the per-user folder of the OS.
     pub fn locate() -> Option<Self> {
+        if let Some(dir) = portable_dir() {
+            return Some(Self::at(&dir));
+        }
         let dirs = directories::ProjectDirs::from("", "", "logview")?;
         Some(Self::at(dirs.config_dir()))
     }
