@@ -105,7 +105,10 @@ plik jest jeszcze indeksowany, filtr idzie za indeksem.
 
 Sekcja „Kolorowanie” w lewym panelu. Każda reguła ma:
 
-- wzorzec (tekst albo `.*` regex, `Aa` – wielkość liter), włącz/wyłącz;
+- wzorzec (tekst albo `.*` regex, `Aa` – wielkość liter), włącz/wyłącz; nowe
+  reguły są od razu regexami;
+- **licznik trafień**: `✓ N` – ile z 2000 linii wokół widoku pasuje do reguły
+  (podpowiedź pokazuje przykładowe dopasowanie), `0 trafień` na pomarańczowo;
 - kolor **tekstu** i/lub **tła** (z przezroczystością), **B** pogrubienie,
   **I** kursywa;
 - **cała linia** – koloruje całą linię zamiast samego dopasowania;
@@ -156,6 +159,13 @@ pierwszych 500 linii; można też wybrać wbudowany albo napisać własny.
   w składni chrono (`%d.%m.%Y %H:%M:%S`, `%z` dla strefy); puste pole oznacza
   rozpoznawanie automatyczne (ISO 8601, syslog, Apache, czas uniksowy).
   Przycisk „Edytuj jako własny” kopiuje wyrażenie formatu wbudowanego.
+- **Wskaż czas w linii…**: okno z przykładową linią (kursor albo góra widoku,
+  ◀ ▶ zmienia linię). Zaznacz myszą znacznik czasu, a program ustali, gdzie
+  leży (początek linii, po N-tym polu, po tekście typu `time=`) i jak go
+  odczytać (automatycznie albo jednym z typowych formatów `strftime`, także sam
+  czas `GG:MM:SS`). Podgląd pokazuje, w ilu z 400 kolejnych linii czas został
+  odczytany; „Użyj tego formatu” ustawia wynik jako własny format (grupy
+  `pre`, `ts`, `msg`).
 - **Łącz linie w rekordy**: linia niepasująca do formatu (np. `\tat …` ze stack
   trace) należy do poprzedniego rekordu. Filtry działają wtedy na całych
   rekordach: dopasowanie w dowolnej linii pokazuje cały rekord, a filtr „−”
@@ -320,7 +330,9 @@ kolorami, formatem, wyszukiwaniem, pozycją, śledzeniem, zakładkami i aktywnym
 profilem. Nowa karta dostaje ustawienia bieżącej karty (albo profil dobrany po
 nazwie pliku). Ponowne otwarcie tego samego pliku przełącza na jego kartę.
 Ctrl+Tab / Ctrl+Shift+Tab przełącza karty, Ctrl+W albo środkowy przycisk myszy
-zamyka kartę.
+zamyka kartę. Gdy kart jest dużo, pasek przewija się kółkiem myszy (bez paska
+przewijania), aktywna karta jest zawsze widoczna, a przycisk `▾ N` po prawej
+wyświetla listę wszystkich kart.
 
 **Widok scalony** (Plik → Scal karty po czasie…): rekordy wybranych plików są
 łączone w kolejności znaczników czasu w nowej karcie „⧉ Scalone: a.log + b.log”.

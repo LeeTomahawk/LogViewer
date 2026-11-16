@@ -21,6 +21,8 @@ pub struct FormatPanel {
     /// Join continuation lines (stack traces) with their record.
     pub multiline: bool,
     pub error: Option<String>,
+    /// Set by the "Wskaż czas w linii" button; the tab opens the picker.
+    pub pick_timestamp: bool,
     builtins: Vec<LogFormat>,
     due_at: Option<Instant>,
 }
@@ -39,6 +41,7 @@ impl Default for FormatPanel {
             },
             multiline: true,
             error: None,
+            pick_timestamp: false,
             builtins: LogFormat::builtins(),
             due_at: None,
         }
@@ -116,6 +119,17 @@ impl FormatPanel {
         self.changed(true);
     }
 
+    /// Switches to a custom format (e.g. from the timestamp picker).
+    pub fn set_custom(&mut self, format: LogFormat) {
+        self.custom = LogFormat {
+            name: "Własny".into(),
+            ..format
+        };
+        self.choice = FormatChoice::Custom;
+        self.error = None;
+        self.changed(true);
+    }
+
     pub fn take_due(&mut self) -> bool {
         match self.due_at {
             Some(at) if at <= Instant::now() => {
@@ -165,6 +179,15 @@ impl FormatPanel {
             });
         if self.choice != before {
             self.changed(true);
+        }
+        if ui
+            .button("Wskaż czas w linii…")
+            .on_hover_text(
+                "Zaznacz znacznik czasu w przykładowej linii – program ustali jego \n                 położenie i format (np. gdy czas nie jest na początku linii)",
+            )
+            .clicked()
+        {
+            self.pick_timestamp = true;
         }
 
         // Regex of the selected built-in format, with an option to edit a copy.

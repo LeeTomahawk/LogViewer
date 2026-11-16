@@ -32,6 +32,7 @@ pub mod tail;
 pub mod text;
 pub mod time;
 pub mod timeline;
+pub mod ts_locate;
 
 pub use encoding::{Codec, TextEncoding};
 pub use export::{ExportJob, rows_to_string};

@@ -3,16 +3,32 @@
 use std::time::{Duration, Instant};
 
 use eframe::egui::{self, Color32, Key, RichText, color_picker::Alpha};
-use logview_core::{HighlightRule, PatternKind, Rgba, RuleError, Scope};
+use logview_core::{HighlightRule, Pattern, PatternKind, Rgba, RuleError, Scope};
 
 const DEBOUNCE: Duration = Duration::from_millis(300);
 const DEFAULT_FG: Rgba = [0xFF, 0x52, 0x52, 0xFF];
 const DEFAULT_BG: Rgba = [0xFF, 0xEB, 0x3B, 0x50];
+/// Lines around the view checked for the hit counts of the rules.
+pub const HIT_SAMPLE_LINES: usize = 2000;
+
+/// How a rule does on the lines around the view.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct RuleHits {
+    pub lines: usize,
+    /// First matched text.
+    pub example: Option<String>,
+}
 
 pub struct HighlightPanel {
     pub rules: Vec<HighlightRule>,
     errors: Vec<Option<String>>,
     due_at: Option<Instant>,
+    /// Hit counts per rule (`None` = inactive or invalid).
+    hits: Vec<Option<RuleHits>>,
+    /// Number of lines the hits were counted in.
+    hit_sample: usize,
+    /// View line the hits were counted around, `None` = recount.
+    pub hit_center: Option<usize>,
 }
 
 impl Default for HighlightPanel {
@@ -23,6 +39,9 @@ impl Default for HighlightPanel {
             rules,
             // Apply the defaults on the first frame.
             due_at: Some(Instant::now()),
+            hits: Vec::new(),
+            hit_sample: 0,
+            hit_center: None,
         }
     }
 }
@@ -94,6 +113,72 @@ impl HighlightPanel {
 
     pub fn has_errors(&self) -> bool {
         self.errors.iter().any(Option::is_some)
+    }
+
+    /// Counts the lines of `sample` each active rule matches.
+    pub fn count_hits(&mut self, sample: &[&[u8]]) {
+        self.hit_sample = sample.len();
+        self.hits = self
+            .rules
+            .iter()
+            .map(|rule| {
+                if !rule.is_active() {
+                    return None;
+                }
+                let pattern = Pattern::new(&rule.pattern, rule.kind, rule.case_sensitive).ok()?;
+                let mut hits = RuleHits {
+                    lines: 0,
+                    example: None,
+                };
+                for line in sample {
+                    if hits.example.is_none() {
+                        if let Some(range) = pattern.find_iter(line).next() {
+                            let text = String::from_utf8_lossy(&line[range]);
+                            let mut text: String = text.chars().take(60).collect();
+                            if text.len() < line.len() && text.chars().count() == 60 {
+                                text.push('…');
+                            }
+                            hits.example = Some(text);
+                            hits.lines += 1;
+                        }
+                    } else if pattern.is_match(line) {
+                        hits.lines += 1;
+                    }
+                }
+                Some(hits)
+            })
+            .collect();
+    }
+
+    /// Hit count shown under a rule.
+    fn hits_label(ui: &mut egui::Ui, hits: Option<&RuleHits>, sample: usize, rule: &HighlightRule) {
+        let Some(hits) = hits else {
+            return;
+        };
+        let sample = crate::fmt::num(sample as u64);
+        if hits.lines == 0 {
+            let looks_like_regex = rule.kind == PatternKind::Text
+                && rule.pattern.chars().any(|c| "\\[](){}|*+?^$".contains(c));
+            let text = if looks_like_regex {
+                "0 trafień – to wygląda na regex, włącz .*"
+            } else {
+                "0 trafień"
+            };
+            ui.colored_label(ui.visuals().warn_fg_color, text)
+                .on_hover_text(format!(
+                    "Żadna z {sample} linii wokół widoku nie pasuje do tej reguły"
+                ));
+        } else {
+            let mut tip = format!(
+                "Pasuje {} z {sample} linii wokół widoku",
+                crate::fmt::num(hits.lines as u64)
+            );
+            if let Some(example) = &hits.example {
+                tip.push_str(&format!("\nPrzykład dopasowania: {example}"));
+            }
+            ui.weak(format!("✓ {}", crate::fmt::num(hits.lines as u64)))
+                .on_hover_text(tip);
+        }
     }
 
     fn changed(&mut self, immediate: bool) {
@@ -214,6 +299,8 @@ impl HighlightPanel {
                     .toggle_value(&mut rule.minimap, "mapa")
                     .on_hover_text("Pokazuj pasujące linie na pasku przewijania")
                     .changed();
+                let hits = self.hits.get(i).and_then(Option::as_ref);
+                Self::hits_label(ui, hits, self.hit_sample, rule);
             });
             if let Some(message) = &self.errors[i] {
                 ui.label(
@@ -258,7 +345,11 @@ impl HighlightPanel {
 
         ui.horizontal(|ui| {
             if ui.button("+ Dodaj regułę").clicked() {
-                self.rules.push(HighlightRule::default());
+                // New rules are regexes (plain words work as regexes too).
+                self.rules.push(HighlightRule {
+                    kind: PatternKind::Regex,
+                    ..HighlightRule::default()
+                });
                 self.errors.push(None);
             }
             if ui.button("Przywróć domyślne").clicked() {

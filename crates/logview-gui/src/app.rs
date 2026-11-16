@@ -33,6 +33,8 @@ pub struct LogViewApp {
     error: Option<String>,
     profile_ui: ProfileUi,
     merge_dialog: Option<MergeDialog>,
+    /// Id of the tab last scrolled into view in the tab bar.
+    tab_bar_shown: Option<u64>,
 }
 
 impl LogViewApp {
@@ -57,6 +59,7 @@ impl LogViewApp {
             error: None,
             profile_ui: ProfileUi::default(),
             merge_dialog: None,
+            tab_bar_shown: None,
         };
         app.init_config(&cc.egui_ctx, initial);
         app
@@ -173,43 +176,14 @@ impl LogViewApp {
         let mut select = None;
         let mut close = None;
         let mut open = false;
+        let active_id = self.tabs.get(self.active).map(|t| t.id);
+        let scroll_to_active = self.tab_bar_shown != active_id;
+        self.tab_bar_shown = active_id;
         egui::TopBottomPanel::top("tabs").show(ctx, |ui| {
-            egui::ScrollArea::horizontal().show(ui, |ui| {
-                ui.horizontal(|ui| {
-                    for (i, tab) in self.tabs.iter().enumerate() {
-                        let mut title = tab.title();
-                        if tab.follow {
-                            title = format!("● {title}");
-                        }
-                        if tab
-                            .file
-                            .as_ref()
-                            .is_some_and(|f| f.merged_sources().is_some())
-                        {
-                            title = format!("⧉ {title}");
-                        }
-                        let hover = tab.file.as_ref().map_or_else(
-                            || "pusta karta".to_owned(),
-                            |f| f.path().display().to_string(),
-                        );
-                        let resp = ui
-                            .selectable_label(i == self.active, title)
-                            .on_hover_text(hover);
-                        if resp.clicked() {
-                            select = Some(i);
-                        }
-                        if resp.middle_clicked() {
-                            close = Some(i);
-                        }
-                        if ui
-                            .small_button("×")
-                            .on_hover_text("Zamknij kartę (Ctrl+W)")
-                            .clicked()
-                        {
-                            close = Some(i);
-                        }
-                        ui.separator();
-                    }
+            ui.horizontal(|ui| {
+                // Fixed buttons on the right; the tabs scroll in the rest of
+                // the row (mouse wheel, no scroll bar eating the bar's height).
+                ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
                     if ui
                         .button("+")
                         .on_hover_text("Otwórz pliki (Ctrl+O)")
@@ -217,6 +191,61 @@ impl LogViewApp {
                     {
                         open = true;
                     }
+                    if self.tabs.len() > 1 {
+                        ui.menu_button(format!("▾ {}", self.tabs.len()), |ui| {
+                            egui::ScrollArea::vertical()
+                                .max_height(ui.ctx().screen_rect().height() * 0.6)
+                                .show(ui, |ui| {
+                                    for (i, tab) in self.tabs.iter().enumerate() {
+                                        if ui
+                                            .selectable_label(i == self.active, tab_title(tab))
+                                            .clicked()
+                                        {
+                                            select = Some(i);
+                                            ui.close_menu();
+                                        }
+                                    }
+                                });
+                        })
+                        .response
+                        .on_hover_text("Lista wszystkich kart");
+                    }
+                    ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                        egui::ScrollArea::horizontal()
+                            .scroll_bar_visibility(
+                                egui::scroll_area::ScrollBarVisibility::AlwaysHidden,
+                            )
+                            .auto_shrink([false, true])
+                            .show(ui, |ui| {
+                                ui.horizontal(|ui| {
+                                    for (i, tab) in self.tabs.iter().enumerate() {
+                                        let hover = tab.file.as_ref().map_or_else(
+                                            || "pusta karta".to_owned(),
+                                            |f| f.path().display().to_string(),
+                                        );
+                                        let resp = ui
+                                            .selectable_label(i == self.active, tab_title(tab))
+                                            .on_hover_text(hover);
+                                        if resp.clicked() {
+                                            select = Some(i);
+                                        }
+                                        if resp.middle_clicked() {
+                                            close = Some(i);
+                                        }
+                                        let x = ui
+                                            .small_button("×")
+                                            .on_hover_text("Zamknij kartę (Ctrl+W)");
+                                        if x.clicked() {
+                                            close = Some(i);
+                                        }
+                                        if scroll_to_active && i == self.active {
+                                            resp.union(x).scroll_to_me(None);
+                                        }
+                                        ui.separator();
+                                    }
+                                });
+                            });
+                    });
                 });
             });
         });
@@ -623,4 +652,20 @@ impl eframe::App for LogViewApp {
         let closing = ctx.input(|i| i.viewport().close_requested());
         self.save_session_if_changed(ctx, closing);
     }
+}
+
+/// Title of a tab in the tab bar: `●` when following, `⧉` for merged views.
+fn tab_title(tab: &Tab) -> String {
+    let mut title = tab.title();
+    if tab.follow {
+        title = format!("● {title}");
+    }
+    if tab
+        .file
+        .as_ref()
+        .is_some_and(|f| f.merged_sources().is_some())
+    {
+        title = format!("⧉ {title}");
+    }
+    title
 }

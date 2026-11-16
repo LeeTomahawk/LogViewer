@@ -14,6 +14,7 @@ use logview_core::{
 
 mod convert;
 mod extras;
+mod ts_picker;
 
 use crate::filter_panel::{FilterPanel, MetaInfo};
 use crate::fmt;
@@ -137,6 +138,7 @@ pub struct Tab {
     /// Bookmarked file lines with their notes.
     pub bookmarks: BTreeMap<usize, String>,
     goto: Option<extras::GotoDialog>,
+    ts_picker: Option<ts_picker::TsPicker>,
     timeline: Option<logview_core::TimelineJob>,
     timeline_key: Option<extras::TimelineKey>,
     timeline_started: Option<Instant>,
@@ -191,6 +193,7 @@ impl Tab {
             minimap_started: None,
             bookmarks: BTreeMap::new(),
             goto: None,
+            ts_picker: None,
             timeline: None,
             timeline_key: None,
             timeline_started: None,
@@ -418,6 +421,7 @@ impl Tab {
             }
             Err(errors) => self.highlight_panel.set_errors(&errors),
         }
+        self.highlight_panel.hit_center = None;
     }
 
     // ---- search ------------------------------------------------------------
@@ -1356,8 +1360,36 @@ impl Tab {
                 ctx.request_repaint_after(left);
             }
         }
+        self.update_rule_hits();
         self.update_minimap();
         self.update_timeline();
+    }
+
+    /// Recounts the hits of the highlight rules when the rules changed or
+    /// the view moved away from the counted lines.
+    fn update_rule_hits(&mut self) {
+        use crate::highlight_panel::HIT_SAMPLE_LINES;
+        let Some(file) = &self.file else { return };
+        let top = self.view.top_line().unwrap_or(0);
+        let count = file.line_count();
+        let stale = match self.highlight_panel.hit_center {
+            None => true,
+            Some(center) => {
+                center.abs_diff(top) > HIT_SAMPLE_LINES / 2
+                    // A short file still being indexed: count again as it grows.
+                    || (count < HIT_SAMPLE_LINES && file.is_indexing())
+            }
+        };
+        if !stale {
+            return;
+        }
+        let start = top.saturating_sub(HIT_SAMPLE_LINES / 2);
+        let end = (start + HIT_SAMPLE_LINES).min(count);
+        let start = end.saturating_sub(HIT_SAMPLE_LINES);
+        let lines = file.lines(start..end);
+        let sample: Vec<&[u8]> = lines.iter().map(|(_, b)| *b).collect();
+        self.highlight_panel.count_hits(&sample);
+        self.highlight_panel.hit_center = Some(top);
     }
 
     /// Shortcuts acting on the visible tab.
@@ -1469,6 +1501,7 @@ impl Tab {
                 .show(ctx, |ui| self.preparing_ui(ui));
         }
         self.goto_window(ctx);
+        self.ts_picker_window(ctx);
     }
 
     // ---- profiles ----------------------------------------------------------------

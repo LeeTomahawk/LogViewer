@@ -8,7 +8,7 @@
 //! Common formats have hand-written parsers (fast enough for every line of a
 //! large file); custom formats use chrono's `strftime` syntax.
 
-use chrono::{DateTime, NaiveDate, NaiveDateTime};
+use chrono::{DateTime, NaiveDate, NaiveDateTime, Timelike};
 
 /// Milliseconds since 1970-01-01T00:00:00 (naive or UTC).
 pub type Millis = i64;
@@ -228,10 +228,16 @@ pub fn parse_with_format(s: &str, format: &str) -> Option<Millis> {
     if let Ok(t) = NaiveDateTime::parse_from_str(s, format) {
         return Some(t.and_utc().timestamp_millis());
     }
-    NaiveDate::parse_from_str(s, format)
+    if let Some(t) = NaiveDate::parse_from_str(s, format)
         .ok()
         .and_then(|d| d.and_hms_opt(0, 0, 0))
-        .map(|t| t.and_utc().timestamp_millis())
+    {
+        return Some(t.and_utc().timestamp_millis());
+    }
+    // Time of day only: milliseconds since midnight (of 1970-01-01).
+    chrono::NaiveTime::parse_from_str(s, format).ok().map(|t| {
+        i64::from(t.num_seconds_from_midnight()) * 1000 + i64::from(t.nanosecond() / 1_000_000)
+    })
 }
 
 /// Whether a chrono format string is valid (parses a sample it formats).
